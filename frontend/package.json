@@ -1,0 +1,6 @@
+{
+  "name": "booknest-client", "private": true, "version": "1.0.0", "type": "module",
+  "scripts": { "dev": "vite --host localhost", "type-check": "vue-tsc --noEmit", "build": "vue-tsc --noEmit && vite build", "preview": "vite preview --host localhost" },
+  "dependencies": { "vue": "^3.5.22", "vue-router": "^4.6.3", "pinia": "^3.0.3", "axios": "^1.12.2", "lucide-vue-next": "^0.468.0", "chart.js": "^4.5.0" },
+  "devDependencies": { "@vitejs/plugin-vue": "^6.0.1", "vite": "^7.1.9", "typescript": "~5.9.3", "vue-tsc": "^3.1.1", "tailwindcss": "^4.1.14", "@tailwindcss/vite": "^4.1.14", "@types/node": "^24.7.2" }
+}

@@ -1,0 +1,5 @@
+import axios from 'axios'
+export const http = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '/api', timeout: 30000 })
+http.interceptors.request.use(c => { const token = sessionStorage.getItem('booknest.token'); if (token) c.headers.Authorization = `Bearer ${token}`; return c })
+http.interceptors.response.use(r => r, e => { if (e.response?.status === 401 && !e.config?.url?.startsWith('/auth/')) window.dispatchEvent(new Event('booknest:unauthorized')); return Promise.reject(e) })
+export function errorMessage(e: unknown): string { if (axios.isAxiosError(e)) { const data = e.response?.data; return data?.errors ? Object.values(data.errors).flat().join(' ') : data?.title || (e.response ? 'Không thể xử lý yêu cầu.' : 'Không kết nối được máy chủ. Vui lòng thử lại.'); } return e instanceof Error ? e.message : 'Đã xảy ra lỗi.' }

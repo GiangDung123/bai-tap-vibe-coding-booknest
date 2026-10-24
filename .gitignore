@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/appsettings.Local.json
+**/.env.local
+**/wwwroot/uploads/
+TestResults/
+*.log
+.local/

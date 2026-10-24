@@ -1,0 +1,4 @@
+<script setup lang="ts">
+withDefaults(defineProps<{ count?: number; catalog?: boolean }>(), { count: 4 })
+</script>
+<template><div role="status" aria-label="Đang tải sách"><span class="sr-only">Đang tải sách…</span><div class="product-grid" :class="{ 'catalog-grid': catalog }" aria-hidden="true"><div v-for="i in count" :key="i" class="skeleton-card"><div class="skeleton-block skeleton-cover"></div><div class="skeleton-block skeleton-line short"></div><div class="skeleton-block skeleton-line"></div><div class="skeleton-block skeleton-line"></div><div class="skeleton-block skeleton-line short"></div></div></div></div></template>

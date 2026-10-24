@@ -1,0 +1,14 @@
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { http, errorMessage } from '../../api/http'
+import type { User, Order } from '../../types'
+import { dateTime, money } from '../../utils/format'
+import LoadingState from '../../components/LoadingState.vue'
+import StatusBadge from '../../components/StatusBadge.vue'
+const route = useRoute(), data = ref<{ user: User; totalOrders: number; totalSpent: number; recentOrders: Order[] }>(), loading = ref(true), error = ref('')
+async function load() { loading.value = true; error.value = ''; try { data.value = (await http.get(`/admin/users/${route.params.id}`)).data } catch(e) { error.value = errorMessage(e) } finally { loading.value = false } }
+onMounted(load)
+</script>
+<template><RouterLink to="/admin/users" class="text-link">← Danh sách người dùng</RouterLink><h1>Chi tiết người dùng</h1><LoadingState v-if="loading" /><p v-else-if="error" class="alert error" role="alert">{{ error }} <button @click="load">Thử lại</button></p><template v-else-if="data"><section class="panel"><h2>{{ data.user.fullName }}</h2><dl class="user-details"><div><dt>Email</dt><dd>{{ data.user.email }}</dd></div><div><dt>Điện thoại</dt><dd>{{ data.user.phoneNumber || 'Chưa cung cấp' }}</dd></div><div><dt>Vai trò</dt><dd>{{ data.user.role }}</dd></div><div><dt>Trạng thái</dt><dd>{{ data.user.isActive ? 'Hoạt động' : 'Bị khóa' }}</dd></div><div><dt>Ngày tham gia</dt><dd>{{ dateTime(data.user.createdAt) }}</dd></div><div><dt>Tổng đơn hàng</dt><dd>{{ data.totalOrders }}</dd></div><div><dt>Tổng mua (Hoàn thành + Đã thanh toán)</dt><dd>{{ money(data.totalSpent) }}</dd></div></dl></section><section class="panel"><h2>Đơn hàng gần đây</h2><div class="table-wrap"><table><thead><tr><th>Đơn hàng</th><th>Ngày đặt</th><th>Tổng tiền</th><th>Đơn hàng</th><th>Thanh toán</th></tr></thead><tbody><tr v-for="o in data.recentOrders" :key="o.id"><td><RouterLink class="text-link" :to="`/admin/orders/${o.id}`">{{ o.orderCode }}</RouterLink></td><td>{{ dateTime(o.createdAt) }}</td><td>{{ money(o.totalAmount) }}</td><td><StatusBadge :status="o.orderStatus" /></td><td><StatusBadge :status="o.paymentStatus" /></td></tr><tr v-if="!data.recentOrders.length"><td colspan="5">Người dùng chưa có đơn hàng.</td></tr></tbody></table></div></section></template></template>
+<style scoped>.user-details { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; margin-top:24px; }.user-details dt { color:var(--muted); font-size:13px; }.user-details dd { margin:4px 0 0; overflow-wrap:anywhere; }@media(max-width:767px) { .user-details { grid-template-columns:minmax(0,1fr); } }</style>

@@ -1,0 +1,7 @@
+PASS customer responsive + interactions 390
+PASS customer responsive + interactions 768
+PASS customer responsive + interactions 1440
+PASS admin read-only 1440
+PASS admin read-only 768
+PASS admin read-only 390
+PASS no pageerror; no order created; no catalog/database writes

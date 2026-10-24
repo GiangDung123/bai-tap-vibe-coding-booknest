@@ -1,0 +1,2 @@
+<script setup lang="ts">defineProps<{ page: number; totalPages: number }>(); defineEmits<{ change: [page: number] }>()</script>
+<template><nav v-if="totalPages > 1" class="pagination" aria-label="Phân trang"><button class="btn secondary" :disabled="page <= 1" @click="$emit('change', page - 1)">Trước</button><span>Trang {{ page }} / {{ totalPages }}</span><button class="btn secondary" :disabled="page >= totalPages" @click="$emit('change', page + 1)">Sau</button></nav></template>

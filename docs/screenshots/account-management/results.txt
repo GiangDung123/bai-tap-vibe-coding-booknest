@@ -1,0 +1,4 @@
+PASS live own profile save/header + checkout defaults/restoration; controlled save-error retains input; responsive 1440/768/390
+PASS live admin list/search/detail/profile, sidebar, confirmation Escape, responsive 1440/768/390
+PASS live password change redirects with success message, clears auth and preserves cart
+PASS live password rate limit: five rejected attempts, sixth HTTP 429 (test admin only)

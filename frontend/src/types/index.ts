@@ -1,0 +1,7 @@
+export interface User { id: number; fullName: string; email: string; role: 'Admin' | 'Customer'; phoneNumber: string; defaultShippingAddress: string; isActive: boolean; createdAt: string; updatedAt: string }
+export interface Category { id: number; name: string; slug: string; description: string; isActive: boolean }
+export interface Product { id: number; name: string; slug: string; sku: string; categoryId: number; categoryName: string; author: string; publisher: string; description: string; price: number; stockQuantity: number; isActive: boolean; isFeatured: boolean; version: number; images: string[]; averageRating: number | null; reviewCount: number; createdAt: string }
+export interface Page<T> { items: T[]; page: number; pageSize: number; totalItems: number; totalPages: number }
+export interface OrderItem { productId: number; productNameSnapshot: string; skuSnapshot: string; unitPrice: number; quantity: number; lineTotal: number }
+export interface Order { id: number; orderCode: string; userId: number; buyerName: string; recipientName: string; recipientPhone: string; shippingAddress: string; note: string; subtotal: number; shippingFee: number; totalAmount: number; orderStatus: string; paymentStatus: string; createdAt: string; completedAt: string | null; items: OrderItem[] }
+export interface Review { id: number; userId: number; fullName: string; rating: number; comment: string; createdAt: string }

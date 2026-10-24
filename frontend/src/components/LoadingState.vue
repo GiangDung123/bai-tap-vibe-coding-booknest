@@ -1,0 +1,1 @@
+<template><div role="status" class="state"><span class="spinner"></span> Đang tải dữ liệu…</div></template>

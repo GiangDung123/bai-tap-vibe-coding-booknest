@@ -1,0 +1,2 @@
+<script setup lang="ts">import { BookOpen } from 'lucide-vue-next'; defineProps<{ title?: string; text?: string }>()</script>
+<template><div class="state"><BookOpen :size="38" /><h3>{{ title || 'Chưa có dữ liệu' }}</h3><p>{{ text || 'Hãy thử lại với lựa chọn khác.' }}</p><slot /></div></template>

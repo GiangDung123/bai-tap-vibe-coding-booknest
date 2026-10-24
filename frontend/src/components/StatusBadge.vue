@@ -1,0 +1,2 @@
+<script setup lang="ts">import BaseBadge from './BaseBadge.vue'; defineProps<{ status: string }>(); const labels: Record<string,string> = { Pending: 'Đang xử lý', Shipping: 'Đang giao', Completed: 'Hoàn thành', Cancelled: 'Đã hủy', Unpaid: 'Chưa thanh toán', Paid: 'Đã thanh toán', Failed: 'Thanh toán lỗi' }</script>
+<template><BaseBadge :tone="status.toLowerCase()">{{ labels[status] || status }}</BaseBadge></template>

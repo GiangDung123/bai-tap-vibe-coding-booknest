@@ -1,0 +1,5 @@
+export const money = (n: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
+export const dateTime = (s: string) => new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }).format(new Date(/[Z+]|-\d\d:\d\d$/.test(s.slice(10)) ? s : s + 'Z'))
+export const todayVN = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+export const safeRedirect = (v: unknown) => typeof v === 'string' && v.startsWith('/') && !v.startsWith('//') && !v.includes('\\') && !v.startsWith('/login') && !v.startsWith('/register') ? v : '/'
+export const fallback = (e: Event) => { const img = e.target as HTMLImageElement; img.onerror = null; img.src = '/fallback.svg' }

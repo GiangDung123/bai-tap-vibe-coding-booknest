@@ -1,0 +1,1 @@
+<template><div class="container page"><div class="state"><span class="eyebrow">404 · LẠC GIỮA NHỮNG TRANG SÁCH</span><h1>Trang này không tồn tại</h1><p>Hãy trở về để tìm một cuốn sách mới.</p><RouterLink to="/" class="btn">Về trang chủ</RouterLink></div></div></template>

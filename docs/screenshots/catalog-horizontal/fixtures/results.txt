@@ -1,0 +1,7 @@
+MODE browser fixtures (explicit or API unavailable); NOT live API validation
+PASS 390px: 2 columns; 42px filters above grid; 20/server page; combined filters/reset/chips/sort/paging/search/cart; no overflow
+PASS 768px: 3 columns; 42px filters above grid; 20/server page; combined filters/reset/chips/sort/paging/search/cart; no overflow
+PASS 1280px: 4 columns; 42px filters above grid; 20/server page; combined filters/reset/chips/sort/paging/search/cart; no overflow
+PASS 1536px: 5 columns; 42px filters above grid; 20/server page; combined filters/reset/chips/sort/paging/search/cart; no overflow
+PASS 320px: 1 columns; 42px filters above grid; 20/server page; combined filters/reset/chips/sort/paging/search/cart; no overflow
+PASS no browser pageerror; no server writes

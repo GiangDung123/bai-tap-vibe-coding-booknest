@@ -1,0 +1,11 @@
+PASS text contrast body: 16.03:1
+PASS text contrast muted/placeholder: 4.97:1
+PASS text contrast button/link: 6.16:1
+PASS text contrast navy description: 6.58:1
+PASS text contrast navy heading: 8.12:1
+PASS 1440x1000: layout, empty-form screenshot, keyboard/focus, inline validation, password toggle/caret, Enter/loading/duplicate guard, fixture error, registration redirect, short-screen scroll, shop header/chat
+PASS 768x1024: layout, empty-form screenshot, keyboard/focus, inline validation, password toggle/caret, Enter/loading/duplicate guard, fixture error, registration redirect, short-screen scroll, shop header/chat
+PASS 390x844: layout, empty-form screenshot, keyboard/focus, inline validation, password toggle/caret, Enter/loading/duplicate guard, fixture error, registration redirect, short-screen scroll, shop header/chat
+PASS 1440x500: layout, empty-form screenshot, keyboard/focus, inline validation, password toggle/caret, Enter/loading/duplicate guard, fixture error, registration redirect, short-screen scroll, shop header/chat
+PASS 390x420: layout, empty-form screenshot, keyboard/focus, inline validation, password toggle/caret, Enter/loading/duplicate guard, fixture error, registration redirect, short-screen scroll, shop header/chat
+PASS no page errors; failure/loading requests intercepted; no real login attempted by this script; no server mutations; no sensitive screenshots/logs
