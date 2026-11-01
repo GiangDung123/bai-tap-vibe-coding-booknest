@@ -1,5 +1,7 @@
 # Account management — 2026-10-24
 
+> Historical implementation and verification notes from before the provider conversion. The current application uses SQL Server and a new SQL Server baseline migration; MariaDB migration/test results below do not verify the current provider.
+
 ## Delivered
 
 - `/admin/users`: server-side search (name/email), role/status filters, stable descending-ID pagination and filtered totals. Safe user projections, initial avatars, status/role badges, user detail with total orders, Completed+Paid spend, five recent orders and links to existing Admin order details. No permanent delete, Admin account creation, or editing others' personal information/passwords.
@@ -42,7 +44,7 @@ All paths below are relative to `D:\Vibe-coding\Baitap`:
 
 Artifacts: `D:\Vibe-coding\Baitap\docs\screenshots\account-management`, `D:\Vibe-coding\Baitap\TestResults\business.trx`, `.local/account-browser-verified.log`, `.local/account-build.log`. Screenshots mask all password fields including visible modes; no tokens/credentials printed. The browser harness receives temporary test tokens only through its process environment, not files/URLs.
 
-To rerun browser + database tests (Vite must run at port 5173): set `BOOKNEST_BROWSER_TEST=1`, then run `D:\Vibe-coding\Baitap\scripts\Test-MariaDb.ps1`. The harness creates dedicated test users, starts isolated API port 5081, then terminates it. With the flag absent the optional browser test returns without launching a browser; API tests still run.
+To rerun browser + database tests against the current provider (Vite must run at port 5173): set `BOOKNEST_BROWSER_TEST=1`, then run `.\scripts\Test-SqlServer.ps1` from the repository root. The harness creates a dedicated test database and users, starts isolated API port 5081, then terminates it. With the flag absent the optional browser test returns without launching a browser; API tests still run.
 
 ## Limitations
 

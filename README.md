@@ -1,6 +1,6 @@
 ﻿# BookNest — Không gian sách của bạn
 
-Ứng dụng thương mại điện tử bán sách với giao diện tiếng Việt, xây dựng bằng **Vue 3, TypeScript, ASP.NET Core 8 và MariaDB**. BookNest có không gian mua sắm dành cho khách hàng, trang quản trị riêng và API lưu trữ dữ liệu thực tế.
+Ứng dụng thương mại điện tử bán sách với giao diện tiếng Việt, xây dựng bằng **Vue 3, TypeScript, ASP.NET Core 8 và SQL Server**. BookNest có không gian mua sắm dành cho khách hàng, trang quản trị riêng và API lưu trữ dữ liệu thực tế.
 
 > Dự án phục vụ học tập và trình diễn. Sách/ảnh bìa seed là dữ liệu minh họa; thanh toán và vận chuyển được mô phỏng, không phát sinh giao dịch tiền thật.
 
@@ -41,7 +41,7 @@
 - Tìm người dùng theo họ tên/email, lọc vai trò/trạng thái và phân trang server.
 - Xem chi tiết tài khoản, tổng đơn, tổng chi tiêu từ đơn **Completed + Paid**, đơn gần đây có liên kết sang chi tiết.
 - Khóa/mở khóa và chuyển vai trò Customer/Admin với xác nhận và lịch sử thao tác.
-- Backend chặn tự khóa/tự đổi vai trò; bảo vệ Admin hoạt động cuối cùng bằng transaction và khóa hàng MariaDB.
+- Backend chặn tự khóa/tự đổi vai trò; bảo vệ Admin hoạt động cuối cùng bằng transaction và khóa hàng SQL Server.
 
 Không bổ sung xóa vĩnh viễn người dùng, Admin tạo tài khoản hoặc sửa mật khẩu/thông tin cá nhân thay người khác trong phạm vi hiện tại.
 
@@ -66,11 +66,11 @@ Tích hợp REST Gemini ở backend, cấu hình tùy chọn. Khi chưa cấu h�
 | UI | CSS tùy chỉnh, Tailwind CSS 4, Lucide, Chart.js |
 | HTTP client | Axios |
 | Backend | ASP.NET Core 8 Web API, C# |
-| Database | MariaDB, Entity Framework Core 8, Pomelo |
+| Database | SQL Server, Entity Framework Core 8 |
 | Xác thực | JWT Bearer, ASP.NET PasswordHasher |
 | API documentation | Swagger / OpenAPI |
 | Xử lý ảnh | SkiaSharp |
-| Kiểm thử | xUnit, WebApplicationFactory, MariaDB riêng, Playwright + Chrome |
+| Kiểm thử | xUnit, WebApplicationFactory, SQL Server riêng, Playwright + Chrome |
 
 Dependency được khai báo trong project files và lockfile frontend. Backend target `net8.0`.
 
@@ -112,11 +112,9 @@ Hướng dẫn sử dụng **PowerShell trên Windows**. Thực hiện từ thư
 
 - .NET SDK 8 và ASP.NET Core Runtime 8.
 - Node.js tương thích Vite 7: **20.19+ hoặc 22.12+**, kèm npm.
-- MariaDB đang chạy; môi trường phát triển đã kiểm tra với **MariaDB 10.4.32** trong XAMPP.
+- SQL Server đang chạy; cấu hình mặc định dùng instance `ADMIN` và Windows Authentication. Tài khoản Windows cần được SQL Server cấp quyền kết nối và tạo database, hoặc database phải được tạo/cấp quyền trước.
 - Git để clone/push repository.
 - Google Chrome nếu chạy bộ kiểm thử trình duyệt hiện có.
-
-Nếu dùng XAMPP, khởi động dịch vụ **MySQL** (MariaDB) trong Control Panel. Không cần chạy Apache/PHP.
 
 Sau khi clone repository và mở thư mục dự án:
 
@@ -130,17 +128,15 @@ Pop-Location
 
 ### 2. Cấu hình local
 
-**Cách A — dùng script Windows/XAMPP:**
+**Cách A — dùng script Windows:**
 
 ```powershell
 .\scripts\Setup-Local.ps1
-# Nếu database yêu cầu mật khẩu:
-# .\scripts\Setup-Local.ps1 -PromptDatabasePassword
-# Nếu không dùng đường dẫn XAMPP mặc định, truyền cổng đã xác nhận:
-# .\scripts\Setup-Local.ps1 -Port 3306 -PromptDatabasePassword
+# Thay ADMIN nếu SQL Server hiển thị server name khác:
+# .\scripts\Setup-Local.ps1 -ServerName 'ADMIN\SQLEXPRESS'
 ```
 
-Script tạo `backend/BookNest.Api/appsettings.Local.json`, sinh JWT secret và mật khẩu demo ngẫu nhiên, không in secrets ra terminal và từ chối ghi đè cấu hình có sẵn. Nếu không truyền `-Port`, script đọc cổng từ `C:\xampp\mysql\bin\my.ini`.
+Script cấu hình SQL Server với Windows Authentication, sinh JWT secret và mật khẩu demo ngẫu nhiên, không in secrets ra terminal và từ chối ghi đè cấu hình có sẵn. Windows account chạy API cần có quyền truy cập SQL Server; tên `ADMIN` mặc định có thể đổi nếu máy dùng named instance.
 
 **Cách B — tự cấu hình:**
 
@@ -153,7 +149,7 @@ Mở file vừa tạo và thay các placeholder:
 
 | Khóa | Ý nghĩa |
 | --- | --- |
-| `ConnectionStrings:BookNest` | Host, port, database, user và mật khẩu MariaDB |
+| `ConnectionStrings:BookNest` | Server, database và Windows Authentication của SQL Server |
 | `Jwt:Secret` | Chuỗi ngẫu nhiên đủ mạnh, ít nhất 32 byte |
 | `Seed:AdminPassword` | Mật khẩu Admin demo, ít nhất 8 ký tự |
 | `Seed:CustomerPassword` | Mật khẩu Customer demo, ít nhất 8 ký tự |
@@ -161,28 +157,38 @@ Mở file vừa tạo và thay các placeholder:
 | `AI_API_KEY` | API key backend; có thể để trống khi chưa dùng AI |
 | `AI_MODEL` | Tên model mà API key được phép truy cập |
 
-File local được `.gitignore` loại trừ. **Không commit file này hoặc đưa key/JWT secret vào frontend.** Không dùng DB root không mật khẩu cho môi trường public.
+File local được `.gitignore` loại trừ. **Không commit file này hoặc đưa key/JWT secret vào frontend.** Connection string mẫu dùng `TrustServerCertificate=True` cho môi trường local; không sao chép tùy chọn này sang production nếu chưa đánh giá chứng chỉ TLS.
 
 Có thể dùng environment variables (`ConnectionStrings__BookNest`, `Jwt__Secret`, `AI_API_KEY`, `AI_MODEL`) hoặc .NET user-secrets. Trong Development, user-secrets được nạp sau cấu hình local/environment; tránh giữ các giá trị xung đột ở nhiều nơi.
 
-### 3. Migrations và dữ liệu demo
+> **Chuyển từ MariaDB/MySQL:** migrations SQL Server tạo schema mới, không chuyển dữ liệu hiện có từ MariaDB. Hãy sao lưu và thực hiện export/import dữ liệu riêng nếu cần giữ dữ liệu cũ; không chạy migrations này trên database MySQL.
+
+### 3. Tạo database và tài khoản
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 dotnet run --project .\backend\BookNest.Api -- --migrate
 ```
 
-Lệnh áp dụng migration rồi kết thúc. Tài khoản DB cần quyền tạo database/schema khi thiết lập lần đầu, hoặc database phải được quản trị viên tạo và cấp quyền trước.
+Lệnh áp dụng migration SQL Server rồi kết thúc. Migration hiện tại tạo schema mới cho SQL Server; nó **không chuyển dữ liệu** từ MariaDB/MySQL hoặc schema cũ. Không chạy migration này trên database MySQL.
 
-**Chỉ với database demo mới**, tạo dữ liệu trình diễn:
+Tạo hai tài khoản demo mà không thêm sách hay đơn hàng:
+
+```powershell
+dotnet run --project .\backend\BookNest.Api -- --seed-accounts
+```
+
+Lệnh này chỉ chạy trong Development, tự áp dụng migration và tạo `admin@booknest.local` cùng `customer@booknest.local` từ mật khẩu trong `Seed:AdminPassword` và `Seed:CustomerPassword`. Seed bỏ qua tài khoản đã tồn tại, không đổi mật khẩu cũ.
+
+Nếu muốn thêm dữ liệu trình diễn (danh mục, sách và đơn mẫu), chỉ chạy trên database demo:
 
 ```powershell
 dotnet run --project .\backend\BookNest.Api -- --seed
 ```
 
-Seed chỉ cho phép trong Development, cũng áp dụng migrations, rồi tạo **5 danh mục, 25 sách minh họa, 2 tài khoản và 5 đơn demo**. Đơn demo đi qua nghiệp vụ đặt hàng/thanh toán, có sử dụng tồn kho. Seed kiểm tra dữ liệu đã tồn tại để tránh trùng và không đổi mật khẩu tài khoản cũ.
+`--seed` cũng tạo hai tài khoản demo, cùng 5 danh mục, 25 sách minh họa và 5 đơn mẫu; các đơn này có trừ tồn kho. Cả hai chế độ seed đều chỉ chạy trong Development, không xóa dữ liệu và không thay mật khẩu tài khoản đã có.
 
-> Database đã có dữ liệu: chỉ áp dụng migration cần thiết, không reset/drop hoặc seed lại để nâng cấp. Với schema từ nguồn khác, cần kiểm tra tương thích trước. Migration hồ sơ/người dùng giữ dữ liệu hiện có, đặt tài khoản cũ ở trạng thái hoạt động; JWT cũ thiếu claim phiên bản cần đăng nhập lại.
+> Database có dữ liệu hoặc schema từ nguồn khác: sao lưu và kiểm tra tương thích trước khi áp dụng migration. Không reset/drop database để nâng cấp. Migration SQL Server mới không phải migration chuyển đổi dữ liệu từ MariaDB/MySQL.
 
 ### 4. Chạy backend
 
@@ -212,14 +218,14 @@ Mở **`http://localhost:5173`**. Vite proxy `/api`, `/uploads`, `/images` sang 
 
 ### Tài khoản demo
 
-Chỉ có sau khi seed trên database demo:
+Được tạo bằng `--seed-accounts` hoặc `--seed`. Mật khẩu là giá trị local bạn cấu hình; xem `Seed:AdminPassword` và `Seed:CustomerPassword` trong `backend/BookNest.Api/appsettings.Local.json`:
 
 | Vai trò | Email | Mật khẩu |
 | --- | --- | --- |
 | Admin | `admin@booknest.local` | `Seed.AdminPassword` khi tạo tài khoản |
 | Customer | `customer@booknest.local` | `Seed.CustomerPassword` khi tạo tài khoản |
 
-Không công khai mật khẩu dùng chung. Sửa cấu hình seed không đổi mật khẩu tài khoản đã tồn tại; sau khi đổi mật khẩu trong hồ sơ, dùng mật khẩu mới.
+Không commit file local hoặc công khai mật khẩu. Sửa cấu hình seed không đổi mật khẩu tài khoản đã tồn tại; sau khi đổi mật khẩu trong hồ sơ, dùng mật khẩu mới.
 
 ## Luồng đơn hàng
 
@@ -264,7 +270,7 @@ Không đặt key trong biến `VITE_*`, source frontend hoặc repository. Cont
 
 ### Build
 
-Dừng API trước khi build trên Windows nếu gặp lỗi khóa DLL/executable; không cần dừng MariaDB.
+Dừng API trước khi build trên Windows nếu gặp lỗi khóa DLL/executable.
 
 ```powershell
 dotnet build .\BookNest.sln
@@ -274,19 +280,19 @@ npm run build
 Pop-Location
 ```
 
-### Kiểm thử API với MariaDB riêng
+### Kiểm thử API với SQL Server riêng
 
 ```powershell
-.\scripts\Test-MariaDb.ps1
+.\scripts\Test-SqlServer.ps1
 ```
 
-Script đọc kết nối local, tạo database `booknest_test_<GUID>` riêng cho từng lượt, áp dụng migrations và chạy xUnit. Test host từ chối tên không đúng prefix. Script hiện yêu cầu kết nối local chứa `Database=booknest_db;` để thay tên database; tài khoản DB cần quyền tạo database test.
+Script đọc kết nối local, tạo database `booknest_test_<GUID>` riêng cho từng lượt, áp dụng migrations và chạy xUnit. Test host từ chối tên không đúng prefix. Script yêu cầu kết nối local chứa `Database=booknest_db;`; Windows account cần quyền tạo database test.
 
-- Không dùng EF InMemory thay cho kiểm thử transaction MariaDB.
+- Không dùng EF InMemory thay cho kiểm thử transaction SQL Server.
 - Không khóa/đổi quyền/đổi mật khẩu tài khoản thật để kiểm thử.
 - Database test được giữ lại, không tự DROP; chỉ dọn thủ công sau khi xác nhận đúng tên.
 - Báo cáo TRX: `TestResults/business.trx`.
-- Không xem `dotnet test` thiếu cấu hình database riêng là một lượt kiểm thử MariaDB thành công.
+- Không xem `dotnet test` thiếu cấu hình database riêng là một lượt kiểm thử SQL Server thành công.
 
 ### Kiểm thử trình duyệt
 
@@ -312,7 +318,7 @@ node .\scripts\catalog-regression.cjs --fixtures
 ```powershell
 $env:BOOKNEST_BROWSER_TEST = '1'
 try {
-    .\scripts\Test-MariaDb.ps1
+    .\scripts\Test-SqlServer.ps1
 } finally {
     Remove-Item Env:BOOKNEST_BROWSER_TEST -ErrorAction SilentlyContinue
 }
@@ -324,7 +330,7 @@ Harness tạo tài khoản test, chạy API riêng tại cổng **5081**, gọi 
 
 ### Kết quả đã ghi nhận
 
-- **26/26 test qua** khi bật cả browser harness trên MariaDB riêng.
+- **26/26 test qua** là kết quả lịch sử trên MariaDB trước khi chuyển provider; chưa xác nhận trên SQL Server. Cần chạy `.\scripts\Test-SqlServer.ps1` để kiểm tra tích hợp trên SQL Server.
 - Backend build, frontend type-check và production build thành công.
 - Kiểm tra phân quyền/ownership, chặn trường đặc quyền, lọc/phân trang, audit và tổng chi tiêu.
 - Kiểm tra đồng thời thao tác Admin, thu hồi JWT sau khóa/đổi quyền/đổi mật khẩu, mở khóa không khôi phục token cũ.

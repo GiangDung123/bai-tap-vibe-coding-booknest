@@ -38,7 +38,7 @@ public class UsersController(BookNestDb db) : ControllerBase
         if (id == actorId) throw new AppException(400, "Bạn không thể tự khóa hoặc tự đổi vai trò.");
         // One persistent row serializes all role/status changes across processes, not just this server.
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
-        await db.SecurityGuards.FromSqlRaw("SELECT * FROM `SecurityGuards` WHERE `Id` = 1 FOR UPDATE").ToListAsync(ct);
+        await db.SecurityGuards.FromSqlRaw("SELECT * FROM [SecurityGuards] WITH (UPDLOCK, ROWLOCK) WHERE [Id] = 1").ToListAsync(ct);
         var actor = await db.Users.AsNoTracking().SingleAsync(u => u.Id == actorId, ct);
         if (!actor.IsActive || actor.Role != "Admin" || actor.AuthVersion.ToString() != User.FindFirstValue("auth_version")) throw new AppException(401, "Vui lòng đăng nhập lại.");
         var u = await db.Users.SingleOrDefaultAsync(u => u.Id == id, ct) ?? throw new AppException(404, "Không tìm thấy người dùng.");

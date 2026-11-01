@@ -15,7 +15,6 @@ public class BookNestDb(DbContextOptions<BookNestDb> options) : DbContext(option
     public DbSet<Review> Reviews => Set<Review>();
     protected override void OnModelCreating(ModelBuilder b)
     {
-        b.HasCharSet("utf8mb4");
         b.Entity<User>().HasIndex(x => x.NormalizedEmail).IsUnique();
         b.Entity<SecurityGuard>().HasData(new SecurityGuard { Id = 1 });
         b.Entity<User>().HasIndex(x => new { x.Role, x.IsActive });

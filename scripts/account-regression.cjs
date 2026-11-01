@@ -1,4 +1,4 @@
-// Invoked only by AccountTests with an isolated MariaDB API on port 5081.
+// Invoked only by AccountTests with an isolated SQL Server API on port 5081.
 const { chromium } = require('../.local/node_modules/playwright');
 const fs = require('node:fs');
 const path = require('node:path');

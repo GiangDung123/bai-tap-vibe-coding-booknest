@@ -17,7 +17,7 @@ if (builder.Environment.IsDevelopment()) builder.Configuration.AddUserSecrets<Pr
 var cs = builder.Configuration.GetConnectionString("BookNest") ?? throw new InvalidOperationException("Cấu hình ConnectionStrings:BookNest bằng user-secrets hoặc appsettings.Local.json.");
 var secret = builder.Configuration["Jwt:Secret"] ?? "";
 if (Encoding.UTF8.GetByteCount(secret) < 32) throw new InvalidOperationException("Jwt:Secret cần ít nhất 32 byte, cấu hình ngoài mã nguồn.");
-builder.Services.AddDbContext<BookNestDb>(o => o.UseMySql(cs, new MariaDbServerVersion(new Version(10, 4, 32))));
+builder.Services.AddDbContext<BookNestDb>(o => o.UseSqlServer(cs));
 builder.Services.AddControllers();
 // Never enable HTTP body logging or EF sensitive-data logging: auth/profile requests contain secrets/PII.
 builder.Services.AddProblemDetails();
@@ -57,14 +57,15 @@ app.UseAuthentication(); app.UseAuthorization(); app.UseRateLimiter();
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 app.MapControllers();
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
-if (args.Contains("--migrate") || args.Contains("--seed"))
+if (args.Contains("--migrate") || args.Contains("--seed") || args.Contains("--seed-accounts"))
 {
     using var scope = app.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<BookNestDb>();
     await db.Database.MigrateAsync();
-    if (args.Contains("--seed"))
+    if (args.Contains("--seed") || args.Contains("--seed-accounts"))
     {
         if (!app.Environment.IsDevelopment()) throw new InvalidOperationException("Seed chỉ được chạy trong Development.");
-        await Seed.Run(scope.ServiceProvider, builder.Configuration);
+        if (args.Contains("--seed-accounts")) await Seed.RunAccounts(scope.ServiceProvider, builder.Configuration);
+        else await Seed.Run(scope.ServiceProvider, builder.Configuration);
     }
     return;
 }

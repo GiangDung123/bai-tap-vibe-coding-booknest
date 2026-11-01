@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using MySqlConnector;
+using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using System.IdentityModel.Tokens.Jwt;
@@ -22,7 +22,7 @@ using Microsoft.IdentityModel.Tokens;
 using Xunit;
 
 namespace BookNest.Tests;
-[CollectionDefinition("MariaDB", DisableParallelization = true)]
+[CollectionDefinition("SqlServer", DisableParallelization = true)]
 public class DatabaseCollection : ICollectionFixture<TestHost> { }
 public class TestHost : WebApplicationFactory<Program>, IAsyncLifetime
 {
@@ -33,9 +33,9 @@ public class TestHost : WebApplicationFactory<Program>, IAsyncLifetime
         Environment.SetEnvironmentVariable("Jwt__Secret", new string('t', 64));
         var input = Environment.GetEnvironmentVariable("BOOKNEST_TEST_CONNECTION");
         Enabled = !string.IsNullOrWhiteSpace(input);
-        Connection = input ?? "Server=localhost;Database=booknest_test_unconfigured;User=root;";
-        var cs = new MySqlConnectionStringBuilder(Connection);
-        if (!cs.Database.StartsWith("booknest_test_", StringComparison.Ordinal) || cs.Database.Length < 20) throw new InvalidOperationException("Test database name must start booknest_test_ and be dedicated to this run.");
+        Connection = input ?? "Server=ADMIN;Database=booknest_test_unconfigured;Integrated Security=True;Encrypt=True;TrustServerCertificate=True;";
+        var cs = new SqlConnectionStringBuilder(Connection);
+        if (!cs.InitialCatalog.StartsWith("booknest_test_", StringComparison.Ordinal) || cs.InitialCatalog.Length < 20) throw new InvalidOperationException("Test database name must start booknest_test_ and be dedicated to this run.");
     }
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -44,7 +44,7 @@ public class TestHost : WebApplicationFactory<Program>, IAsyncLifetime
         builder.ConfigureServices(services =>
         {
             var old = services.Where(d => d.ServiceType == typeof(DbContextOptions<BookNestDb>) || d.ServiceType == typeof(BookNestDb)).ToList(); foreach (var d in old) services.Remove(d);
-            services.AddDbContext<BookNestDb>(o => o.UseMySql(Connection, new MariaDbServerVersion(new Version(10, 4, 32))));
+            services.AddDbContext<BookNestDb>(o => o.UseSqlServer(Connection));
             // Rate limiting is tested separately; business tests must not share a quota.
             var limits = services.Where(d => d.ServiceType == typeof(Microsoft.Extensions.Options.IConfigureOptions<RateLimiterOptions>)).ToList(); foreach (var d in limits) services.Remove(d);
             services.Configure<RateLimiterOptions>(o => { o.AddPolicy("auth", _ => RateLimitPartition.GetNoLimiter("test")); o.AddPolicy("chat", _ => RateLimitPartition.GetNoLimiter("test")); o.AddPolicy("password", _ => RateLimitPartition.GetNoLimiter("test")); });
@@ -58,7 +58,7 @@ public class TestHost : WebApplicationFactory<Program>, IAsyncLifetime
     }
     async Task IAsyncLifetime.DisposeAsync() { await DisposeAsync(); }
 }
-[Collection("MariaDB")]
+[Collection("SqlServer")]
 public class BusinessTests(TestHost host)
 {
     private HttpClient Admin()
@@ -93,12 +93,12 @@ public class BusinessTests(TestHost host)
     }
     [Fact] public async Task DuplicateEmailAndAdminAuthorization()
     {
-        Assert.True(host.Enabled, "Run scripts/Test-MariaDb.ps1 for isolated MariaDB.");
+        Assert.True(host.Enabled, "Run scripts/Test-SqlServer.ps1 for an isolated SQL Server database.");
         var email = Id() + "@example.test"; var (c, _) = await Customer(email); var r = await c.PostAsJsonAsync("/api/auth/register", new { fullName = "Test", email = email.ToUpperInvariant(), password = "Password123!", confirmPassword = "Password123!", role = "Admin" }); Assert.Equal(HttpStatusCode.Conflict, r.StatusCode); Assert.Equal(HttpStatusCode.Forbidden, (await c.GetAsync("/api/admin/products")).StatusCode);
     }
     [Fact] public async Task OwnershipAndSnapshotAndServerPrice()
     {
-        Assert.True(host.Enabled, "Run scripts/Test-MariaDb.ps1 for isolated MariaDB.");
+        Assert.True(host.Enabled, "Run scripts/Test-SqlServer.ps1 for an isolated SQL Server database.");
         var (a, _) = await Customer(); var (b, _) = await Customer(); var p = await Product(); var dto = Checkout(new CartLine(p.Id, 2));
         var response = await a.PostAsJsonAsync("/api/orders", new { dto.RecipientName, dto.RecipientPhone, dto.ShippingAddress, dto.Note, dto.IdempotencyKey, dto.Items, totalAmount = 1, unitPrice = 1 }); response.EnsureSuccessStatusCode(); var o = (await response.Content.ReadFromJsonAsync<Order>())!; Assert.Equal(250000, o.TotalAmount);
         Assert.Equal(HttpStatusCode.NotFound, (await b.GetAsync($"/api/orders/{o.Id}")).StatusCode); Assert.Equal(HttpStatusCode.NotFound, (await b.PostAsJsonAsync($"/api/orders/{o.Id}/simulate-payment", new { success = true })).StatusCode); Assert.Equal(HttpStatusCode.NotFound, (await b.PostAsync($"/api/orders/{o.Id}/cancel", null)).StatusCode);
@@ -107,48 +107,48 @@ public class BusinessTests(TestHost host)
     }
     [Fact] public async Task InvalidQuantityAndTransactionRollback()
     {
-        Assert.True(host.Enabled, "Run scripts/Test-MariaDb.ps1 for isolated MariaDB.");
+        Assert.True(host.Enabled, "Run scripts/Test-SqlServer.ps1 for an isolated SQL Server database.");
         var (c, _) = await Customer(); var p = await Product(3); var outOfStock = await Product(0);
         Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsJsonAsync("/api/orders", Checkout(new CartLine(p.Id, 0)))).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync("/api/orders", Checkout(new CartLine(p.Id, 1), new CartLine(outOfStock.Id, 1)))).StatusCode); Assert.Equal(3, await Stock(p.Id));
     }
     [Fact] public async Task LastCopyHasOnlyOneBuyer()
     {
-        Assert.True(host.Enabled, "Run scripts/Test-MariaDb.ps1 for isolated MariaDB.");
+        Assert.True(host.Enabled, "Run scripts/Test-SqlServer.ps1 for an isolated SQL Server database.");
         var (a, _) = await Customer(); var (b, _) = await Customer(); var p = await Product(1);
         var results = await Task.WhenAll(a.PostAsJsonAsync("/api/orders", Checkout(new CartLine(p.Id, 1))), b.PostAsJsonAsync("/api/orders", Checkout(new CartLine(p.Id, 1)))); Assert.Single(results.Where(r => r.IsSuccessStatusCode)); Assert.Equal(0, await Stock(p.Id));
     }
     [Fact] public async Task ConcurrentRetryClaimsKeyOnlyOnce()
     {
-        Assert.True(host.Enabled, "Run scripts/Test-MariaDb.ps1 for isolated MariaDB.");
+        Assert.True(host.Enabled, "Run scripts/Test-SqlServer.ps1 for an isolated SQL Server database.");
         var (c, _) = await Customer(); var p = await Product(8); var dto = Checkout(new CartLine(p.Id, 2));
         var responses = await Task.WhenAll(c.PostAsJsonAsync("/api/orders", dto), c.PostAsJsonAsync("/api/orders", dto)); foreach (var r in responses) r.EnsureSuccessStatusCode(); var first = (await responses[0].Content.ReadFromJsonAsync<Order>())!; var second = (await responses[1].Content.ReadFromJsonAsync<Order>())!; Assert.Equal(first.Id, second.Id); Assert.Equal(6, await Stock(p.Id));
         Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync("/api/orders", dto with { Note = "Nội dung khác" })).StatusCode);
     }
     [Fact] public async Task PaidCannotBePaidAgainOrCancelled()
     {
-        Assert.True(host.Enabled, "Run scripts/Test-MariaDb.ps1 for isolated MariaDB.");
+        Assert.True(host.Enabled, "Run scripts/Test-SqlServer.ps1 for an isolated SQL Server database.");
         var (c, _) = await Customer(); var p = await Product(); var o = await Create(c, Checkout(new CartLine(p.Id, 1)));
         (await c.PostAsJsonAsync($"/api/orders/{o.Id}/simulate-payment", new { success = true })).EnsureSuccessStatusCode(); Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync($"/api/orders/{o.Id}/simulate-payment", new { success = true })).StatusCode); Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsync($"/api/orders/{o.Id}/cancel", null)).StatusCode); Assert.Equal(4, await Stock(p.Id));
     }
     [Fact] public async Task CancelRestoresStockExactlyOnce()
     {
-        Assert.True(host.Enabled, "Run scripts/Test-MariaDb.ps1 for isolated MariaDB.");
+        Assert.True(host.Enabled, "Run scripts/Test-SqlServer.ps1 for an isolated SQL Server database.");
         var (c, _) = await Customer(); var p = await Product(); var o = await Create(c, Checkout(new CartLine(p.Id, 2))); var results = await Task.WhenAll(c.PostAsync($"/api/orders/{o.Id}/cancel", null), c.PostAsync($"/api/orders/{o.Id}/cancel", null)); Assert.Single(results.Where(r => r.IsSuccessStatusCode)); Assert.Equal(5, await Stock(p.Id));
     }
     [Fact] public async Task PaymentAndCancellationCannotBothWin()
     {
-        Assert.True(host.Enabled, "Run scripts/Test-MariaDb.ps1 for isolated MariaDB.");
+        Assert.True(host.Enabled, "Run scripts/Test-SqlServer.ps1 for an isolated SQL Server database.");
         var (c, _) = await Customer(); var p = await Product(); var o = await Create(c, Checkout(new CartLine(p.Id, 1))); var results = await Task.WhenAll(c.PostAsJsonAsync($"/api/orders/{o.Id}/simulate-payment", new { success = true }), c.PostAsync($"/api/orders/{o.Id}/cancel", null)); Assert.Single(results.Where(r => r.IsSuccessStatusCode)); var saved = (await c.GetFromJsonAsync<Order>($"/api/orders/{o.Id}"))!; Assert.False(saved.OrderStatus == "Cancelled" && saved.PaymentStatus == "Paid"); Assert.Equal(saved.OrderStatus == "Cancelled" ? 5 : 4, await Stock(p.Id));
     }
     [Fact] public async Task OptimisticVersionDetectsOrderStockChange()
     {
-        Assert.True(host.Enabled, "Run scripts/Test-MariaDb.ps1 for isolated MariaDB.");
+        Assert.True(host.Enabled, "Run scripts/Test-SqlServer.ps1 for an isolated SQL Server database.");
         var (c, _) = await Customer(); var p = await Product(); using var scope = host.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<BookNestDb>(); var stale = await db.Products.SingleAsync(x => x.Id == p.Id); await Create(c, Checkout(new CartLine(p.Id, 1))); stale.StockQuantity = 50; stale.Version++; await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => db.SaveChangesAsync()); Assert.Equal(4, await Stock(p.Id));
     }
     [Fact] public async Task InvalidTransitionsAndRevenueAndReviewEligibility()
     {
-        Assert.True(host.Enabled, "Run scripts/Test-MariaDb.ps1 for isolated MariaDB.");
+        Assert.True(host.Enabled, "Run scripts/Test-SqlServer.ps1 for an isolated SQL Server database.");
         var (c, uid) = await Customer(); var p = await Product(); var o = await Create(c, Checkout(new CartLine(p.Id, 1)));
         Assert.Equal(HttpStatusCode.Forbidden, (await c.PostAsJsonAsync($"/api/products/{p.Id}/reviews", new { rating = 5, comment = "Chưa mua xong" })).StatusCode);
         using var scope = host.Services.CreateScope(); var service = scope.ServiceProvider.GetRequiredService<OrderService>(); await Assert.ThrowsAsync<AppException>(() => service.Change(o.Id, 0, true, "Completed", default)); await Assert.ThrowsAsync<AppException>(() => service.Change(o.Id, 0, true, "Shipping", default));
@@ -158,17 +158,17 @@ public class BusinessTests(TestHost host)
     }
     [Fact] public async Task CombinedFilteringAndPagination()
     {
-        Assert.True(host.Enabled, "Run scripts/Test-MariaDb.ps1 for isolated MariaDB.");
+        Assert.True(host.Enabled, "Run scripts/Test-SqlServer.ps1 for an isolated SQL Server database.");
         var p = await Product(5, 125000); var c = host.CreateClient(); var result = (await c.GetFromJsonAsync<PageResult<ProductView>>($"/api/products?search=ki%E1%BB%83m&categoryId={p.CategoryId}&minPrice=120000&maxPrice=130000&sort=priceAsc&pageSize=1"))!; Assert.Equal(1, result.TotalItems); Assert.Equal(p.Id, result.Items.Single().Id); Assert.Equal(1, result.TotalPages); Assert.Equal(HttpStatusCode.BadRequest, (await c.GetAsync("/api/products?minPrice=200&maxPrice=100")).StatusCode);
     }
     [Fact] public async Task MissingAiKeyIsSafeAndCatalogStillWorks()
     {
-        Assert.True(host.Enabled, "Run scripts/Test-MariaDb.ps1 for isolated MariaDB.");
+        Assert.True(host.Enabled, "Run scripts/Test-SqlServer.ps1 for an isolated SQL Server database.");
         var c = host.CreateClient(); Assert.Equal(HttpStatusCode.ServiceUnavailable, (await c.PostAsJsonAsync("/api/chat", new { message = "Tư vấn sách" })).StatusCode); (await c.GetAsync("/api/products")).EnsureSuccessStatusCode();
     }
     [Fact] public async Task AdminStockApiRejectsStaleVersionAndPrivilegedPayment()
     {
-        Assert.True(host.Enabled, "Run isolated MariaDB tests.");
+        Assert.True(host.Enabled, "Run isolated SQL Server tests.");
         var p = await Product(); var (customer, _) = await Customer(); var admin = Admin();
         var o = await Create(customer, Checkout(new CartLine(p.Id,1)));
         var stale = new ProductWriteDto(p.Name,p.Slug,p.SKU,p.CategoryId,p.Author,p.Publisher,p.Description,p.Price,50,true,false,p.Version,[]);
@@ -178,7 +178,7 @@ public class BusinessTests(TestHost host)
     }
     [Fact] public async Task UploadDecodesContentAndRejectsDisguisedSvg()
     {
-        Assert.True(host.Enabled, "Run isolated MariaDB tests.");
+        Assert.True(host.Enabled, "Run isolated SQL Server tests.");
         var admin = Admin();
         using var bad = new MultipartFormDataContent(); bad.Add(new ByteArrayContent(Encoding.UTF8.GetBytes("<svg xmlns='http://www.w3.org/2000/svg'></svg>")),"file","cover.jpg");
         Assert.Equal(HttpStatusCode.BadRequest,(await admin.PostAsync("/api/admin/uploads/images",bad)).StatusCode);
@@ -188,13 +188,13 @@ public class BusinessTests(TestHost host)
     }
     [Fact] public async Task HiddenCategoryCannotBePurchased()
     {
-        Assert.True(host.Enabled, "Run isolated MariaDB tests.");
+        Assert.True(host.Enabled, "Run isolated SQL Server tests.");
         var p = await Product(); var admin=Admin(); (await admin.DeleteAsync($"/api/admin/categories/{p.CategoryId}")).EnsureSuccessStatusCode();
         var (c, _) = await Customer(); Assert.Equal(HttpStatusCode.Conflict,(await c.PostAsJsonAsync("/api/orders",Checkout(new CartLine(p.Id,1)))).StatusCode); Assert.Equal(5,await Stock(p.Id));
     }
     [Fact] public async Task ExpiredAndForgedJwtAreRejected()
     {
-        Assert.True(host.Enabled, "Run isolated MariaDB tests.");
+        Assert.True(host.Enabled, "Run isolated SQL Server tests.");
         var c=host.CreateClient();
         foreach(var signingKey in new[] { new string('t',64), new string('x',64) })
         {
@@ -208,7 +208,7 @@ public class BusinessTests(TestHost host)
     }
     [Fact] public async Task AiProviderErrorIsSanitized()
     {
-        Assert.True(host.Enabled, "Run isolated MariaDB tests.");
+        Assert.True(host.Enabled, "Run isolated SQL Server tests.");
         using var scope=host.Services.CreateScope(); using var http=new HttpClient(new ProviderFailure());
         var cfg=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?> { ["AI_PROVIDER"]="Gemini",["AI_API_KEY"]="test-only-key",["AI_MODEL"]="test-model" }).Build();
         var service=new ChatService(http,scope.ServiceProvider.GetRequiredService<BookNestDb>(),cfg); var ex=await Assert.ThrowsAsync<AppException>(()=>service.Ask("Tư vấn sách",default)); Assert.Equal(503,ex.Status); Assert.Equal("Trợ lý hiện chưa sẵn sàng",ex.Message);

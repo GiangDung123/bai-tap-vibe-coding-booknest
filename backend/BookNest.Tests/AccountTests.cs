@@ -9,13 +9,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 namespace BookNest.Tests;
-[Collection("MariaDB")]
+[Collection("SqlServer")]
 public class AccountTests(TestHost host)
 {
     private const string Password = "Account-Test-123!";
     private async Task<(HttpClient Client, User User)> Create(string role = "Customer")
     {
-        Assert.True(host.Enabled, "Use scripts/Test-MariaDb.ps1; never run mutations against the real database.");
+        Assert.True(host.Enabled, "Use scripts/Test-SqlServer.ps1; never run mutations against the real database.");
         using var scope = host.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<BookNestDb>();
         var u = new User { FullName = "Account Test", Email = Guid.NewGuid().ToString("N") + "@example.test", Role = role };
         u.NormalizedEmail = u.Email.ToUpperInvariant(); u.PasswordHash = scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>().HashPassword(u, Password);

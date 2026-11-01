@@ -8,14 +8,8 @@ public static class Seed
 {
     public static async Task Run(IServiceProvider services, IConfiguration config)
     {
-        var db = services.GetRequiredService<BookNestDb>(); var hasher = services.GetRequiredService<IPasswordHasher<User>>();
-        foreach (var (email, name, role, key) in new[] { ("admin@booknest.local", "Quản trị BookNest", "Admin", "AdminPassword"), ("customer@booknest.local", "Bạn đọc BookNest", "Customer", "CustomerPassword") })
-        {
-            if (await db.Users.AnyAsync(u => u.NormalizedEmail == email.ToUpperInvariant())) continue;
-            var password = config["Seed:" + key]; if (string.IsNullOrWhiteSpace(password) || password.Length < 8) throw new AppException(400, "Cần cấu hình Seed:" + key + " (ít nhất 8 ký tự) ở cục bộ.");
-            var u = new User { Email = email, NormalizedEmail = email.ToUpperInvariant(), FullName = name, Role = role }; u.PasswordHash = hasher.HashPassword(u, password); db.Users.Add(u);
-        }
-        await db.SaveChangesAsync();
+        await RunAccounts(services, config);
+        var db = services.GetRequiredService<BookNestDb>();
         var names = new[] { "Văn học", "Kinh tế", "Kỹ năng sống", "Công nghệ", "Thiếu nhi" };
         var slugs = new[] { "van-hoc", "kinh-te", "ky-nang-song", "cong-nghe", "thieu-nhi" };
         for (var i = 0; i < names.Length; i++) if (!await db.Categories.AnyAsync(c => c.Slug == slugs[i])) db.Categories.Add(new Category { Name = names[i], Slug = slugs[i], Description = "Tủ sách " + names[i].ToLowerInvariant() });
@@ -40,5 +34,17 @@ public static class Seed
             if (i == 3) await orderService.Change(o.Id, customer.Id, false, "Failed", default);
             db.ChangeTracker.Clear();
         }
+    }
+
+    public static async Task RunAccounts(IServiceProvider services, IConfiguration config)
+    {
+        var db = services.GetRequiredService<BookNestDb>(); var hasher = services.GetRequiredService<IPasswordHasher<User>>();
+        foreach (var (email, name, role, key) in new[] { ("admin@booknest.local", "Quản trị BookNest", "Admin", "AdminPassword"), ("customer@booknest.local", "Bạn đọc BookNest", "Customer", "CustomerPassword") })
+        {
+            if (await db.Users.AnyAsync(u => u.NormalizedEmail == email.ToUpperInvariant())) continue;
+            var password = config["Seed:" + key]; if (string.IsNullOrWhiteSpace(password) || password.Length < 8) throw new AppException(400, "Cần cấu hình Seed:" + key + " (ít nhất 8 ký tự) ở cục bộ.");
+            var u = new User { Email = email, NormalizedEmail = email.ToUpperInvariant(), FullName = name, Role = role }; u.PasswordHash = hasher.HashPassword(u, password); db.Users.Add(u);
+        }
+        await db.SaveChangesAsync();
     }
 }
